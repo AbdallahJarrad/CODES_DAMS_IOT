@@ -1,0 +1,99 @@
+ clc 
+ clear 
+ close all
+global g 
+g= 0;
+global c
+c = 1;
+global t
+myMQTT = mqtt('tcp://industrial.api.ubidots.com','Port',1883,'Username','BBFF-sJYYUNdMEqZ06RUJexCJFUpExoYkLL','Password','');
+mySub = subscribe(myMQTT,"/v1.6/devices/matlab/php/lv",'QoS',2) ;
+mySub.Callback = @test12;
+sub2 = subscribe(myMQTT,"/v1.6/devices/matlab/blink/lv",'QoS',2) ;
+sub2.Callback = @test13;
+publish(myMQTT, '/v1.6/devices/matlab', '{"test":"0"}')
+k =true;
+T = zeros(1,30);
+c2 = 1;
+figure;
+order1 = 0;
+order2 = 0;
+while k == true
+   
+  if g > 80
+  publish(myMQTT, '/v1.6/devices/matlab','{"test":"1"}')
+  order1 = 1;
+  
+  elseif order1==1
+     publish(myMQTT,'/v1.6/devices/matlab','{"test":"0"}')
+  order1=0;
+  
+  end
+  
+  if g > 30
+  publish(myMQTT, '/v1.6/devices/matlab','{"blink":"1"}')
+  disp(1)
+  order2 = 1;
+  
+  elseif order2 == 1
+     publish(myMQTT,'/v1.6/devices/matlab','{"blink":"0"}')
+     disp(0)
+     order2=0;
+
+  end
+ 
+   if t == 1  && order2==0 && order2~=1
+      publish(myMQTT,'/v1.6/devices/matlab','{"blink":"0"}') 
+   end 
+  if c2< 31
+      T(c2) = g;
+      axis([0 30 0 100]);
+ plot(T)
+ axis([0 30 0 100]);
+ grid on
+ c2=c2+1;
+  else 
+      for i =1:29
+          T(i)= T(i+1);
+      end
+      T(30) = g;
+      axis([0 30 0 100]);
+      plot(T);
+      axis([0 30 0 100]);
+      grid on
+  end
+  pause(1.0);
+  
+  
+  if c > 3
+      c = 1 ;
+  end 
+  
+  
+end
+function test12(topic, msg)
+global c
+global g
+global t
+fprintf('%s : %s \n ',topic,msg)
+msg = str2double(convertStringsToChars(msg))
+
+g=msg;
+%test13();
+% if g > 100
+%    publish(myMQTT, '/v1.6/devices/matlab','{"test":"1"}')
+% else
+%     publish(myMQTT,'/v1.6/devices/matlab','{"test":"0"}')
+% end
+
+c =c +1;
+end
+
+function test13(topic,msg)
+
+global t
+msg = str2double(convertStringsToChars(msg))
+t = msg;
+
+
+end
