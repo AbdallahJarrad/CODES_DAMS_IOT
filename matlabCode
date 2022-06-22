@@ -6,7 +6,7 @@ g= 0;
 global c
 c = 1;
 global t
-myMQTT = mqtt('tcp://industrial.api.ubidots.com','Port',1883,'Username','BBFF-sJYYUNdMEqZ06RUJexCJFUpExoYkLL','Password','');
+myMQTT = mqtt('tcp://industrial.api.ubidots.com','Port',1883,'Username','','Password','');
 mySub = subscribe(myMQTT,"/v1.6/devices/matlab/php/lv",'QoS',2) ;
 mySub.Callback = @test12;
 sub2 = subscribe(myMQTT,"/v1.6/devices/matlab/blink/lv",'QoS',2) ;
