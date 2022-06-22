@@ -1,0 +1,164 @@
+#include "WiFi.h"
+#include "PubSubClient.h"
+//#include "ArduinoJson.h"
+String broker = "industrial.api.ubidots.com";
+int port = 1883;
+String username = "broker user name";
+String sPassword = "broker password";
+String topicIn = "/v1.6/devices/matlab/test/lv";
+String topicIn2 = "/v1.6/devices/matlab/blink/lv";
+String topicOut = "/v1.6/devices/matlab";
+String id = "id of the device from broker";
+const char* ssid ="Wi-Fi ssid";
+const char* password =" wi-fi password";
+int wifiLedPort = 27;
+int serverLedPort = 14;
+float datas = 35 ;
+//int power = 27;
+float D =0;
+int alert =33;
+int pwmled = 26;
+int freq = 4;
+int ch = 9;
+int res = 8;
+int duty = 0;
+ WiFiClient mqttClient; //mqttClient is a variale of type wificlient 
+ PubSubClient client(mqttClient);
+
+void setup() {
+pinMode(alert,OUTPUT);
+for (int i =0; i < 11; i++){
+digitalWrite(alert,HIGH);
+delay(200);
+digitalWrite(alert,LOW);
+}
+ledcSetup(ch,freq,res);
+ledcAttachPin(pwmled,ch);
+pinMode(wifiLedPort,OUTPUT);
+pinMode(serverLedPort,OUTPUT);
+pinMode(datas,INPUT);
+//pinMode(power,OUTPUT);
+//pinMode(ledPin, OUTPUT);
+//pinMode(buttonPin, INPUT);
+//  for (int i =0; i < 11; i++) {
+     // pinMode(pins[i],OUTPUT);
+//  }
+Serial.begin(9600); //to show output on serial monitor or plotter //number of bits per second sent from esp through serial 
+WiFi.begin(ssid, password);
+while (WiFi.status() != WL_CONNECTED)
+{
+  digitalWrite(wifiLedPort,HIGH);
+  delay(300);
+  digitalWrite(wifiLedPort,LOW);
+  delay(300);
+  //Serial.println(WiFi.status());
+
+  }
+  if (WiFi.status() == WL_CONNECTED){
+    Serial.println(WiFi.localIP());
+   
+
+  client.setServer(broker.c_str(), port); //setup for server 
+  client.setCallback(callback); //when you get data from server(broker), callback is the function to process this data. (asynchronous func)
+  digitalWrite(wifiLedPort,HIGH);
+  }
+
+}
+
+//WiFiClient mqttClient; //mqttClient is a variale of type wificlient 
+//PubSubClient client(mqttClient);
+void callback(char* topic, byte* payload, unsigned int length) {
+     Serial.println(String(topic));
+  if (String(topic) == topicIn){ //loadcontrol channel
+    Serial.println("it is my topic"); 
+    String msg = String((char*) payload); //convert from bytes to string
+    msg = msg.substring(0, length); //to avoid noise
+    Serial.println(msg);
+    if (msg == "1.0") {
+    digitalWrite(alert,HIGH);
+    }
+    else{
+      digitalWrite(alert,LOW);
+      }
+    }
+if (String(topic) == topicIn2){ //loadcontrol channel
+    Serial.println("it is my topic"); 
+    String msg = String((char*) payload); //convert from bytes to string
+    msg = msg.substring(0, length); //to avoid noise
+    Serial.println(msg);
+    if (msg == "1.0") {
+    duty = 125;
+    ledcWrite(ch,duty);
+    }
+    else{
+        duty = 0;
+        ledcWrite(ch,duty);
+      }
+    }
+
+    
+    }
+  
+  
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+if (client.connect(id.c_str(),username.c_str(),sPassword.c_str())) {//if i got auth from authentication
+      digitalWrite(serverLedPort, HIGH);
+      Serial.println("connected");
+     //   for (int i=0; i < 11; i++) {
+       //   publishStatus(i);
+      //  
+      client.subscribe(topicIn.c_str());
+       client.subscribe(topicIn2.c_str());}
+     else {
+      digitalWrite(serverLedPort, HIGH);
+     delay(500);
+     digitalWrite(serverLedPort, LOW);
+     delay(500);
+  } 
+ 
+}
+}
+
+
+//WiFiClient mqttClient; //mqttClient is a variale of type wificlient 
+//PubSubClient client(mqttClient);
+
+void publishStatus(int DD) {
+        
+        String msg = String("{" + String('"') + "php" + String('"') + ":" + String('"') + DD + String('"') + String('}'));
+     //   msg = msg + "," + String('"') + "state" + String('"')+ ":" + String('"') + String(loadStatus ? "true" : "false") + String('"');
+      //  msg = msg + "," + String('"') + "ValueLoad" + String('"')+ ":" + String('"') + String(value) + String('"');
+       // msg = msg + "}";
+        Serial.println(msg);
+        if (client.publish(topicOut.c_str(), msg.c_str())) {}
+}
+
+
+
+void loop() {
+  
+  D = analogRead(datas)/40.95;
+  Serial.println(D);
+   delay(1000);
+//  digitalWrite(power,HIGH);
+ //  delay(1000);
+//  digitalWrite(power,LOW);
+client.loop();
+if (!client.connected()) {
+    reconnect();
+    
+  }
+  else{
+        
+          publishStatus(D);
+        
+  }
+}
+
+
+
+  
